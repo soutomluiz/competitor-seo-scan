@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { DOMParser, Document } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,14 +16,13 @@ interface SeoAnalysisResult {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { url, userId } = await req.json()
-    console.log(`Analyzing URL: ${url} for user: ${userId}`)
+    const { url } = await req.json()
+    console.log(`Analyzing URL: ${url}`)
 
     const SCRAPING_BEE_API_KEY = Deno.env.get('SCRAPING_BEE_API_KEY')
     if (!SCRAPING_BEE_API_KEY) {
@@ -34,9 +34,13 @@ serve(async (req) => {
     const response = await fetch(scrapingBeeUrl)
     const html = await response.text()
 
-    // Parse HTML using DOMParser
+    // Parse HTML using deno-dom
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
+    
+    if (!doc) {
+      throw new Error('Failed to parse HTML document')
+    }
 
     // Extract title
     const title = doc.querySelector('title')?.textContent || ''
@@ -45,7 +49,7 @@ serve(async (req) => {
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     
     // Extract and analyze keywords from content
-    const content = doc.body.textContent || ''
+    const content = doc.body?.textContent || ''
     const words = content.toLowerCase()
       .replace(/[^\w\s]/g, '')
       .split(/\s+/)
@@ -103,8 +107,7 @@ serve(async (req) => {
         description: metaDescription,
         page_count: pageCount,
         keywords,
-        links,
-        user_id: userId
+        links
       })
 
     if (insertError) {
