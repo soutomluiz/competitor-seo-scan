@@ -5,6 +5,8 @@ import { LinksTable } from "@/components/LinksTable";
 import { SeoMetrics } from "@/components/SeoMetrics";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisResult {
   title: string;
@@ -22,6 +24,18 @@ const Index = () => {
   const handleAnalyze = async (url: string) => {
     setIsLoading(true);
     try {
+      // Check authentication first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to analyze websites.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const analysisResult = await analyzeSeo(url);
       setResult(analysisResult);
       
