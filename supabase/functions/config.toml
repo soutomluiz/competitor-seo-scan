@@ -1,0 +1,3 @@
+project_id = "xmyhncwloxszvlckinik"
+[global.env]
+SCRAPING_BEE_API_KEY = "env(SCRAPING_BEE_API_KEY)"
