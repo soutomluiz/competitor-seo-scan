@@ -4,6 +4,7 @@ import { KeywordsChart } from "@/components/KeywordsChart";
 import { LinksTable } from "@/components/LinksTable";
 import { SeoMetrics } from "@/components/SeoMetrics";
 import { useToast } from "@/components/ui/use-toast";
+import { analyzeSeo } from "@/services/seoAnalysis";
 
 interface AnalysisResult {
   title: string;
@@ -21,33 +22,15 @@ const Index = () => {
   const handleAnalyze = async (url: string) => {
     setIsLoading(true);
     try {
-      // Simulated API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const analysisResult = await analyzeSeo(url);
+      setResult(analysisResult);
       
-      // Mock data - replace with actual API response
-      setResult({
-        title: "Example Website - Home",
-        description: "This is an example website meta description for demonstration purposes.",
-        pageCount: 5,
-        keywords: [
-          { text: "example", count: 10 },
-          { text: "website", count: 8 },
-          { text: "seo", count: 6 },
-          { text: "analysis", count: 5 },
-          { text: "content", count: 4 },
-        ],
-        links: [
-          { url: "/about", text: "About Us", type: "internal" },
-          { url: "/contact", text: "Contact", type: "internal" },
-          { url: "https://example.com", text: "External Link", type: "external" },
-        ],
-      });
-
       toast({
         title: "Analysis Complete",
         description: "Website analysis has been completed successfully.",
       });
     } catch (error) {
+      console.error('Analysis error:', error);
       toast({
         title: "Error",
         description: "Failed to analyze website. Please try again.",
