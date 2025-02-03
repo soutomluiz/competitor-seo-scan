@@ -9,15 +9,9 @@ interface SeoAnalysisResult {
 }
 
 export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
-  // Check authentication first
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    throw new Error("Authentication required to perform analysis");
-  }
-
   try {
     const { data, error } = await supabase.functions.invoke('analyze-seo', {
-      body: { url, userId: session.user.id }
+      body: { url }
     });
 
     if (error) {
