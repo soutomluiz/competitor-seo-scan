@@ -46,18 +46,24 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
 
     if (pdfError) {
       console.error('PDF generation error:', pdfError);
+      throw new Error('Failed to generate PDF report');
     }
 
     let reportUrl;
     if (pdfData && typeof pdfData === 'string') {
-      // Convert the base64 data to a Blob
-      const binaryData = atob(pdfData);
-      const bytes = new Uint8Array(binaryData.length);
-      for (let i = 0; i < binaryData.length; i++) {
-        bytes[i] = binaryData.charCodeAt(i);
+      try {
+        // Convert the base64 data to a Blob
+        const binaryData = atob(pdfData);
+        const bytes = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+          bytes[i] = binaryData.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        reportUrl = URL.createObjectURL(blob);
+      } catch (e) {
+        console.error('Error creating PDF URL:', e);
+        throw new Error('Failed to create PDF URL');
       }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      reportUrl = URL.createObjectURL(blob);
     }
 
     return {
@@ -67,6 +73,6 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
     };
   } catch (error) {
     console.error('Service error:', error);
-    throw new Error('Failed to analyze website. Please try again.');
+    throw error;
   }
 };

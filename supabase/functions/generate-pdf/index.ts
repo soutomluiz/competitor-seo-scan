@@ -75,21 +75,25 @@ serve(async (req) => {
     // Finalize PDF
     doc.end();
 
-    // Wait for all chunks to be collected
-    const pdfBytes = new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []));
-    
-    // Convert to base64
-    const base64Data = btoa(String.fromCharCode.apply(null, [...pdfBytes]));
+    return new Promise((resolve) => {
+      // Wait for all chunks to be collected
+      doc.on('end', () => {
+        const pdfBytes = new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []));
+        
+        // Convert to base64
+        const base64Data = btoa(String.fromCharCode.apply(null, [...pdfBytes]));
 
-    return new Response(
-      JSON.stringify(base64Data),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+        resolve(new Response(
+          JSON.stringify(base64Data),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json'
+            }
+          }
+        ));
+      });
+    });
   } catch (error) {
     console.error('Error generating PDF:', error);
     return new Response(
