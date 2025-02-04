@@ -21,14 +21,37 @@ serve(async (req) => {
     // Validate and format URL
     let formattedUrl;
     try {
-      formattedUrl = new URL(url);
-      // Ensure protocol is present
-      if (!formattedUrl.protocol) {
-        formattedUrl = new URL(`https://${url}`);
+      // Remove trailing colon and slash if present
+      let cleanUrl = url.replace(/:\/*$/, '');
+      
+      // Ensure URL has protocol
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = `https://${cleanUrl}`;
       }
+
+      formattedUrl = new URL(cleanUrl);
+
+      // Validate domain format (must include at least one dot)
+      if (!formattedUrl.hostname.includes('.')) {
+        throw new Error('Invalid domain format');
+      }
+
+      console.log('Formatted URL:', formattedUrl.toString());
     } catch (error) {
-      console.error('Invalid URL:', error);
-      throw new Error('Invalid URL provided');
+      console.error('URL Validation Error:', error);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid URL format',
+          details: error.message
+        }),
+        { 
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     const SCRAPING_BEE_API_KEY = Deno.env.get('SCRAPING_BEE_API_KEY')
