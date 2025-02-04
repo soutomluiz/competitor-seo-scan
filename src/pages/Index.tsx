@@ -10,7 +10,7 @@ import { ComparisonMode } from "@/components/ComparisonMode";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
 import { Button } from "@/components/ui/button";
-import { Download, ArrowsUpDown } from "lucide-react";
+import { Download, ArrowUpDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AnalysisResult {
@@ -88,7 +88,7 @@ const Index = () => {
               Análise Individual
             </TabsTrigger>
             <TabsTrigger value="comparison" className="flex items-center gap-2">
-              <ArrowsUpDown className="h-4 w-4" />
+              <ArrowUpDown className="h-4 w-4" />
               Comparação
             </TabsTrigger>
           </TabsList>
