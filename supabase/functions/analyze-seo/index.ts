@@ -18,14 +18,34 @@ serve(async (req) => {
     const { url } = await req.json()
     console.log(`Analyzing URL: ${url}`)
 
+    // Validate and format URL
+    let formattedUrl;
+    try {
+      formattedUrl = new URL(url);
+      // Ensure protocol is present
+      if (!formattedUrl.protocol) {
+        formattedUrl = new URL(`https://${url}`);
+      }
+    } catch (error) {
+      console.error('Invalid URL:', error);
+      throw new Error('Invalid URL provided');
+    }
+
     const SCRAPING_BEE_API_KEY = Deno.env.get('SCRAPING_BEE_API_KEY')
     if (!SCRAPING_BEE_API_KEY) {
       throw new Error('ScrapingBee API key not configured')
     }
 
-    // Call ScrapingBee API
-    const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1?api_key=${SCRAPING_BEE_API_KEY}&url=${encodeURIComponent(url)}&render_js=false`
+    // Call ScrapingBee API with properly formatted URL
+    const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1?api_key=${SCRAPING_BEE_API_KEY}&url=${encodeURIComponent(formattedUrl.toString())}&render_js=false`
+    console.log('Calling ScrapingBee with URL:', scrapingBeeUrl);
+    
     const response = await fetch(scrapingBeeUrl)
+    if (!response.ok) {
+      console.error('ScrapingBee API error:', response.status, response.statusText);
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
+    
     const html = await response.text()
 
     // Parse HTML
@@ -120,7 +140,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in analyze-seo function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { 
         status: 500,
         headers: {
