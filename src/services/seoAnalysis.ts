@@ -31,6 +31,27 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
       throw new Error('Failed to analyze website');
     }
 
+    // Generate PDF report
+    const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-pdf', {
+      body: {
+        title: data.title,
+        description: data.description,
+        keywords: data.keywords,
+        links: data.links,
+        seoScore: data.seoScore,
+        suggestions: data.suggestions
+      },
+      responseType: 'arraybuffer'
+    });
+
+    if (pdfError) {
+      console.error('PDF generation error:', pdfError);
+    } else {
+      // Convert PDF to blob and create URL
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
+      data.report_url = URL.createObjectURL(blob);
+    }
+
     return {
       ...data,
       suggestions: data.suggestions || [],
