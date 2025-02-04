@@ -8,6 +8,8 @@ import { SuggestionsList } from "@/components/SuggestionsList";
 import { AnalysisHistory } from "@/components/AnalysisHistory";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 interface AnalysisResult {
   title: string;
@@ -41,18 +43,30 @@ const Index = () => {
       setResult(analysisResult);
       
       toast({
-        title: "Analysis Complete",
-        description: "Website analysis has been completed successfully.",
+        title: "Análise Completa",
+        description: "A análise do site foi concluída com sucesso.",
       });
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
-        title: "Error",
-        description: "Failed to analyze website. Please try again.",
+        title: "Erro",
+        description: "Falha ao analisar o site. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (result?.reportUrl) {
+      window.open(result.reportUrl, '_blank');
+    } else {
+      toast({
+        title: "Erro",
+        description: "Relatório PDF não disponível.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -69,27 +83,37 @@ const Index = () => {
         <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
 
         {result && (
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <SeoMetrics
-                title={result.title}
-                description={result.description}
-                pageCount={result.pageCount}
-              />
+          <div>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-semibold">Resultados da Análise</h2>
+              <Button onClick={handleExport} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Exportar PDF
+              </Button>
             </div>
-            <SeoScore
-              score={result.seoScore.score}
-              details={result.seoScore.details}
-            />
-            <KeywordsChart keywords={result.keywords} />
-            <div className="md:col-span-2">
-              <LinksTable links={result.links} />
-            </div>
-            {result.suggestions && result.suggestions.length > 0 && (
+            
+            <div className="grid gap-8 md:grid-cols-2">
               <div className="md:col-span-2">
-                <SuggestionsList suggestions={result.suggestions} />
+                <SeoMetrics
+                  title={result.title}
+                  description={result.description}
+                  pageCount={result.pageCount}
+                />
               </div>
-            )}
+              <SeoScore
+                score={result.seoScore.score}
+                details={result.seoScore.details}
+              />
+              <KeywordsChart keywords={result.keywords} />
+              <div className="md:col-span-2">
+                <LinksTable links={result.links} />
+              </div>
+              {result.suggestions && result.suggestions.length > 0 && (
+                <div className="md:col-span-2">
+                  <SuggestionsList suggestions={result.suggestions} />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
