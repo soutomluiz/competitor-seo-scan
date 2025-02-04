@@ -1,5 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AnalysisCard } from "./AnalysisCard";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface KeywordsChartProps {
   keywords: { text: string; count: number }[];
@@ -28,9 +30,31 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
     return "#D2E3C8"; // Low relevance - Very light green
   };
 
+  // Generate related keyword suggestions based on top keywords
+  const generateRelatedKeywords = (keyword: string): string[] => {
+    const commonPrefixes = ['como', 'melhor', 'top', 'guia'];
+    const commonSuffixes = ['dicas', 'tutorial', 'profissional', 'avançado'];
+    
+    return [
+      `${commonPrefixes[Math.floor(Math.random() * commonPrefixes.length)]} ${keyword}`,
+      `${keyword} ${commonSuffixes[Math.floor(Math.random() * commonSuffixes.length)]}`,
+      `${keyword} online`,
+    ];
+  };
+
+  // Get related keywords for top 3 most relevant keywords
+  const relatedKeywordSuggestions = data
+    .sort((a, b) => b.relevance - a.relevance)
+    .slice(0, 3)
+    .map(item => ({
+      mainKeyword: item.keyword,
+      related: generateRelatedKeywords(item.keyword),
+      relevance: item.relevance,
+    }));
+
   return (
     <AnalysisCard title="Top Keywords">
-      <div className="space-y-4">
+      <div className="space-y-6">
         <p className="text-sm text-muted-foreground">
           As palavras-chave são classificadas por relevância SEO, considerando frequência e impacto no ranqueamento.
         </p>
@@ -66,6 +90,7 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
         <div className="flex justify-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#86A789" }} />
@@ -79,6 +104,50 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#D2E3C8" }} />
             <span>Baixa Relevância</span>
           </div>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          <h4 className="font-semibold text-lg">Sugestões de Palavras-chave Relacionadas</h4>
+          <p className="text-sm text-muted-foreground">
+            Considere adicionar estas palavras-chave relacionadas para melhorar seu SEO:
+          </p>
+          <ScrollArea className="h-[200px] rounded-md border p-4">
+            <div className="space-y-6">
+              {relatedKeywordSuggestions.map((item, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h5 className="font-medium">{item.mainKeyword}</h5>
+                    <Badge 
+                      variant="outline" 
+                      className={`${
+                        item.relevance >= 80 
+                          ? 'bg-primary/10 text-primary' 
+                          : item.relevance >= 60 
+                          ? 'bg-yellow-500/10 text-yellow-500' 
+                          : 'bg-destructive/10 text-destructive'
+                      }`}
+                    >
+                      {item.relevance >= 80 
+                        ? 'Alta Relevância' 
+                        : item.relevance >= 60 
+                        ? 'Média Relevância' 
+                        : 'Baixa Relevância'}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {item.related.map((related, idx) => (
+                      <div 
+                        key={idx}
+                        className="text-sm p-2 rounded-md bg-secondary/50 border border-border/50"
+                      >
+                        {related}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </AnalysisCard>
