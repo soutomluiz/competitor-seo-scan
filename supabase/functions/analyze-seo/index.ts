@@ -1,18 +1,113 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { DOMParser, Document } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SeoAnalysisResult {
+// Common words to filter out
+const stopWords = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+  'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
+  'will', 'with', 'home', 'contact', 'terms', 'privacy', 'policy', 'about',
+  'menu', 'click', 'here', 'read', 'more', 'this', 'page', 'website'
+]);
+
+// SEO scoring criteria
+const seoScoring = {
+  titleLength: {
+    min: 30,
+    max: 60,
+    weight: 15
+  },
+  descriptionLength: {
+    min: 120,
+    max: 160,
+    weight: 25
+  },
+  keywordsCount: {
+    min: 5,
+    max: 15,
+    weight: 20
+  },
+  internalLinksCount: {
+    min: 3,
+    weight: 20
+  },
+  externalLinksCount: {
+    min: 2,
+    weight: 20
+  }
+};
+
+function calculateSeoScore(analysis: {
   title: string;
   description: string;
-  pageCount: number;
   keywords: { text: string; count: number }[];
-  links: { url: string; text: string; type: "internal" | "external" }[];
+  links: { type: 'internal' | 'external' }[];
+}): {
+  score: number;
+  details: {
+    titleScore: number;
+    descriptionScore: number;
+    keywordsScore: number;
+    internalLinksScore: number;
+    externalLinksScore: number;
+  };
+} {
+  // Title score
+  const titleLength = analysis.title.length;
+  const titleScore = titleLength >= seoScoring.titleLength.min && 
+    titleLength <= seoScoring.titleLength.max ? 
+    seoScoring.titleLength.weight : 
+    (seoScoring.titleLength.weight * 0.5);
+
+  // Description score
+  const descLength = analysis.description.length;
+  const descriptionScore = descLength >= seoScoring.descriptionLength.min && 
+    descLength <= seoScoring.descriptionLength.max ? 
+    seoScoring.descriptionLength.weight : 
+    (seoScoring.descriptionLength.weight * 0.5);
+
+  // Keywords score
+  const keywordsCount = analysis.keywords.length;
+  const keywordsScore = keywordsCount >= seoScoring.keywordsCount.min && 
+    keywordsCount <= seoScoring.keywordsCount.max ? 
+    seoScoring.keywordsCount.weight : 
+    (seoScoring.keywordsCount.weight * 0.5);
+
+  // Links scores
+  const internalLinks = analysis.links.filter(link => link.type === 'internal').length;
+  const externalLinks = analysis.links.filter(link => link.type === 'external').length;
+  
+  const internalLinksScore = internalLinks >= seoScoring.internalLinksCount.min ? 
+    seoScoring.internalLinksCount.weight : 
+    (seoScoring.internalLinksCount.weight * internalLinks / seoScoring.internalLinksCount.min);
+
+  const externalLinksScore = externalLinks >= seoScoring.externalLinksCount.min ? 
+    seoScoring.externalLinksCount.weight : 
+    (seoScoring.externalLinksCount.weight * externalLinks / seoScoring.externalLinksCount.min);
+
+  const totalScore = Math.round(
+    titleScore + 
+    descriptionScore + 
+    keywordsScore + 
+    internalLinksScore + 
+    externalLinksScore
+  );
+
+  return {
+    score: totalScore,
+    details: {
+      titleScore,
+      descriptionScore,
+      keywordsScore,
+      internalLinksScore,
+      externalLinksScore
+    }
+  };
 }
 
 serve(async (req) => {
@@ -53,7 +148,7 @@ serve(async (req) => {
     const words = content.toLowerCase()
       .replace(/[^\w\s]/g, '')
       .split(/\s+/)
-      .filter(word => word.length > 3)
+      .filter(word => word.length > 3 && !stopWords.has(word.toLowerCase()))
     
     const keywordCount: Record<string, number> = {}
     words.forEach(word => {
@@ -86,12 +181,22 @@ serve(async (req) => {
         .map(link => link.url)
     ).size
 
-    const analysisResult: SeoAnalysisResult = {
+    // Calculate SEO score
+    const seoAnalysis = {
+      title,
+      description: metaDescription,
+      keywords,
+      links
+    };
+    const seoScore = calculateSeoScore(seoAnalysis);
+
+    const analysisResult = {
       title,
       description: metaDescription,
       pageCount,
       keywords,
-      links
+      links,
+      seoScore
     }
 
     // Store results in Supabase

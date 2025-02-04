@@ -3,6 +3,7 @@ import { UrlInput } from "@/components/UrlInput";
 import { KeywordsChart } from "@/components/KeywordsChart";
 import { LinksTable } from "@/components/LinksTable";
 import { SeoMetrics } from "@/components/SeoMetrics";
+import { SeoScore } from "@/components/SeoScore";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
 
@@ -12,6 +13,16 @@ interface AnalysisResult {
   pageCount: number;
   keywords: { text: string; count: number }[];
   links: { url: string; text: string; type: "internal" | "external" }[];
+  seoScore: {
+    score: number;
+    details: {
+      titleScore: number;
+      descriptionScore: number;
+      keywordsScore: number;
+      internalLinksScore: number;
+      externalLinksScore: number;
+    };
+  };
 }
 
 const Index = () => {
@@ -62,6 +73,10 @@ const Index = () => {
                 pageCount={result.pageCount}
               />
             </div>
+            <SeoScore
+              score={result.seoScore.score}
+              details={result.seoScore.details}
+            />
             <KeywordsChart keywords={result.keywords} />
             <div className="md:col-span-2">
               <LinksTable links={result.links} />
