@@ -4,6 +4,8 @@ import { KeywordsChart } from "@/components/KeywordsChart";
 import { LinksTable } from "@/components/LinksTable";
 import { SeoMetrics } from "@/components/SeoMetrics";
 import { SeoScore } from "@/components/SeoScore";
+import { SuggestionsList } from "@/components/SuggestionsList";
+import { AnalysisHistory } from "@/components/AnalysisHistory";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
 
@@ -23,6 +25,8 @@ interface AnalysisResult {
       externalLinksScore: number;
     };
   };
+  suggestions: string[];
+  reportUrl?: string;
 }
 
 const Index = () => {
@@ -81,8 +85,15 @@ const Index = () => {
             <div className="md:col-span-2">
               <LinksTable links={result.links} />
             </div>
+            {result.suggestions && result.suggestions.length > 0 && (
+              <div className="md:col-span-2">
+                <SuggestionsList suggestions={result.suggestions} />
+              </div>
+            )}
           </div>
         )}
+
+        <AnalysisHistory />
       </div>
     </div>
   );

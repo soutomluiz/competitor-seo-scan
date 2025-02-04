@@ -17,6 +17,8 @@ export type Database = {
           keywords: Json | null
           links: Json | null
           page_count: number | null
+          report_url: string | null
+          suggestions: Json | null
           title: string | null
           url: string
           user_id: string | null
@@ -28,6 +30,8 @@ export type Database = {
           keywords?: Json | null
           links?: Json | null
           page_count?: number | null
+          report_url?: string | null
+          suggestions?: Json | null
           title?: string | null
           url: string
           user_id?: string | null
@@ -39,6 +43,8 @@ export type Database = {
           keywords?: Json | null
           links?: Json | null
           page_count?: number | null
+          report_url?: string | null
+          suggestions?: Json | null
           title?: string | null
           url?: string
           user_id?: string | null

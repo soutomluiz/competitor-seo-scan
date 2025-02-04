@@ -16,6 +16,8 @@ interface SeoAnalysisResult {
       externalLinksScore: number;
     };
   };
+  suggestions: string[];
+  reportUrl?: string;
 }
 
 export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
@@ -29,7 +31,11 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
       throw new Error('Failed to analyze website');
     }
 
-    return data;
+    return {
+      ...data,
+      suggestions: data.suggestions || [],
+      reportUrl: data.report_url
+    };
   } catch (error) {
     console.error('Service error:', error);
     throw new Error('Failed to analyze website. Please try again.');
