@@ -42,6 +42,51 @@ const seoScoring = {
   }
 };
 
+function generateSuggestions(analysis: {
+  title: string;
+  description: string;
+  keywords: { text: string; count: number }[];
+  links: { type: 'internal' | 'external' }[];
+}): string[] {
+  const suggestions: string[] = [];
+
+  // Title suggestions
+  if (!analysis.title) {
+    suggestions.push("Adicione um título à sua página - é um elemento SEO crucial.");
+  } else if (analysis.title.length < seoScoring.titleLength.min) {
+    suggestions.push(`Seu título tem apenas ${analysis.title.length} caracteres. Considere expandí-lo para pelo menos ${seoScoring.titleLength.min} caracteres para melhor SEO.`);
+  } else if (analysis.title.length > seoScoring.titleLength.max) {
+    suggestions.push(`Seu título tem ${analysis.title.length} caracteres. Considere reduzi-lo para no máximo ${seoScoring.titleLength.max} caracteres para melhor SEO.`);
+  }
+
+  // Description suggestions
+  if (!analysis.description) {
+    suggestions.push("Adicione uma meta descrição à sua página para melhorar a visibilidade nos resultados de busca.");
+  } else if (analysis.description.length < seoScoring.descriptionLength.min) {
+    suggestions.push(`Sua meta descrição tem apenas ${analysis.description.length} caracteres. Considere expandí-la para pelo menos ${seoScoring.descriptionLength.min} caracteres.`);
+  } else if (analysis.description.length > seoScoring.descriptionLength.max) {
+    suggestions.push(`Sua meta descrição tem ${analysis.description.length} caracteres. Considere reduzi-la para no máximo ${seoScoring.descriptionLength.max} caracteres.`);
+  }
+
+  // Keywords suggestions
+  if (analysis.keywords.length < seoScoring.keywordsCount.min) {
+    suggestions.push(`Seu site tem poucas palavras-chave (${analysis.keywords.length}). Tente incluir mais termos relevantes para seu conteúdo.`);
+  }
+
+  // Links suggestions
+  const internalLinks = analysis.links.filter(link => link.type === 'internal').length;
+  const externalLinks = analysis.links.filter(link => link.type === 'external').length;
+
+  if (internalLinks < seoScoring.internalLinksCount.min) {
+    suggestions.push(`Seu site tem poucos links internos (${internalLinks}). Adicione mais links entre suas páginas para melhorar a navegação.`);
+  }
+  if (externalLinks < seoScoring.externalLinksCount.min) {
+    suggestions.push(`Seu site tem poucos links externos (${externalLinks}). Considere adicionar links para recursos relevantes e confiáveis.`);
+  }
+
+  return suggestions;
+}
+
 function calculateSeoScore(analysis: {
   title: string;
   description: string;
@@ -181,7 +226,7 @@ serve(async (req) => {
         .map(link => link.url)
     ).size
 
-    // Calculate SEO score
+    // Calculate SEO score and generate suggestions
     const seoAnalysis = {
       title,
       description: metaDescription,
@@ -189,6 +234,7 @@ serve(async (req) => {
       links
     };
     const seoScore = calculateSeoScore(seoAnalysis);
+    const suggestions = generateSuggestions(seoAnalysis);
 
     const analysisResult = {
       title,
@@ -196,7 +242,8 @@ serve(async (req) => {
       pageCount,
       keywords,
       links,
-      seoScore
+      seoScore,
+      suggestions
     }
 
     // Store results in Supabase
@@ -212,7 +259,8 @@ serve(async (req) => {
         description: metaDescription,
         page_count: pageCount,
         keywords,
-        links
+        links,
+        suggestions
       })
 
     if (insertError) {
