@@ -70,16 +70,21 @@ serve(async (req) => {
     // Finalize PDF
     doc.end();
 
-    // Combine chunks into a single Uint8Array
+    // Wait for all chunks to be collected
     const pdfBytes = new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []));
+    
+    // Convert to base64
+    const base64Data = btoa(String.fromCharCode.apply(null, [...pdfBytes]));
 
-    return new Response(pdfBytes, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename=seo-report.pdf'
+    return new Response(
+      JSON.stringify(base64Data),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
   } catch (error) {
     console.error('Error generating PDF:', error);
     return new Response(

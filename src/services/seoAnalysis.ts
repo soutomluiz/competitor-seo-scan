@@ -40,15 +40,19 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
         links: data.links,
         seoScore: data.seoScore,
         suggestions: data.suggestions
-      },
-      responseType: 'arraybuffer'
+      }
     });
 
     if (pdfError) {
       console.error('PDF generation error:', pdfError);
-    } else {
-      // Convert PDF to blob and create URL
-      const blob = new Blob([pdfData], { type: 'application/pdf' });
+    } else if (pdfData) {
+      // Convert the base64 data to a Blob
+      const binaryData = atob(pdfData as string);
+      const bytes = new Uint8Array(binaryData.length);
+      for (let i = 0; i < binaryData.length; i++) {
+        bytes[i] = binaryData.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
       data.report_url = URL.createObjectURL(blob);
     }
 
