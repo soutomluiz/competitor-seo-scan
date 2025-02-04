@@ -6,10 +6,12 @@ import { SeoMetrics } from "@/components/SeoMetrics";
 import { SeoScore } from "@/components/SeoScore";
 import { SuggestionsList } from "@/components/SuggestionsList";
 import { AnalysisHistory } from "@/components/AnalysisHistory";
+import { ComparisonMode } from "@/components/ComparisonMode";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeSeo } from "@/services/seoAnalysis";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, ArrowsUpDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AnalysisResult {
   title: string;
@@ -80,44 +82,62 @@ const Index = () => {
           </p>
         </div>
 
-        <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
+        <Tabs defaultValue="single" className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsTrigger value="single" className="flex items-center gap-2">
+              Análise Individual
+            </TabsTrigger>
+            <TabsTrigger value="comparison" className="flex items-center gap-2">
+              <ArrowsUpDown className="h-4 w-4" />
+              Comparação
+            </TabsTrigger>
+          </TabsList>
 
-        {result && (
-          <div>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-semibold">Resultados da Análise</h2>
-              <Button onClick={handleExport} variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Exportar PDF
-              </Button>
-            </div>
-            
-            <div className="grid gap-8 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <SeoMetrics
-                  title={result.title}
-                  description={result.description}
-                  pageCount={result.pageCount}
-                />
-              </div>
-              <SeoScore
-                score={result.seoScore.score}
-                details={result.seoScore.details}
-              />
-              <KeywordsChart keywords={result.keywords} />
-              <div className="md:col-span-2">
-                <LinksTable links={result.links} />
-              </div>
-              {result.suggestions && result.suggestions.length > 0 && (
-                <div className="md:col-span-2">
-                  <SuggestionsList suggestions={result.suggestions} />
+          <TabsContent value="single" className="space-y-8">
+            <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
+
+            {result && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-semibold">Resultados da Análise</h2>
+                  <Button onClick={handleExport} variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Exportar PDF
+                  </Button>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+                
+                <div className="grid gap-8 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <SeoMetrics
+                      title={result.title}
+                      description={result.description}
+                      pageCount={result.pageCount}
+                    />
+                  </div>
+                  <SeoScore
+                    score={result.seoScore.score}
+                    details={result.seoScore.details}
+                  />
+                  <KeywordsChart keywords={result.keywords} />
+                  <div className="md:col-span-2">
+                    <LinksTable links={result.links} />
+                  </div>
+                  {result.suggestions && result.suggestions.length > 0 && (
+                    <div className="md:col-span-2">
+                      <SuggestionsList suggestions={result.suggestions} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-        <AnalysisHistory />
+            <AnalysisHistory />
+          </TabsContent>
+
+          <TabsContent value="comparison">
+            <ComparisonMode />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
