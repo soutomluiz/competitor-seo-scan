@@ -13,6 +13,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { SeoScore } from "./SeoScore";
 
 interface ComparisonResult {
   url: string;
@@ -28,6 +29,11 @@ interface ComparisonResult {
   };
   keywords: { text: string; count: number }[];
   links: { url: string; text: string; type: "internal" | "external" }[];
+}
+
+interface ComparisonInsight {
+  message: string;
+  type: "positive" | "negative" | "neutral";
 }
 
 export const ComparisonMode = () => {
@@ -93,6 +99,39 @@ export const ComparisonMode = () => {
     return <ArrowRight className="text-yellow-500 h-4 w-4" />;
   };
 
+  const generateInsights = (site1: ComparisonResult, site2: ComparisonResult): ComparisonInsight[] => {
+    const insights: ComparisonInsight[] = [];
+    
+    // Compare internal links
+    const internalLinks1 = site1.links.filter(l => l.type === "internal").length;
+    const internalLinks2 = site2.links.filter(l => l.type === "internal").length;
+    if (Math.abs(internalLinks1 - internalLinks2) > 5) {
+      insights.push({
+        message: `${new URL(internalLinks1 > internalLinks2 ? site1.url : site2.url).hostname} possui mais links internos (${Math.abs(internalLinks1 - internalLinks2)} a mais)`,
+        type: "neutral"
+      });
+    }
+
+    // Compare SEO scores
+    if (Math.abs(site1.seoScore.score - site2.seoScore.score) > 10) {
+      insights.push({
+        message: `${new URL(site1.seoScore.score > site2.seoScore.score ? site1.url : site2.url).hostname} tem melhor SEO geral`,
+        type: site1.seoScore.score > site2.seoScore.score ? "positive" : "negative"
+      });
+    }
+
+    // Compare keywords
+    const commonKeywords = site1.keywords.filter(kw1 =>
+      site2.keywords.some(kw2 => kw2.text === kw1.text)
+    ).length;
+    insights.push({
+      message: `${commonKeywords} palavras-chave em comum encontradas`,
+      type: commonKeywords > 5 ? "positive" : "neutral"
+    });
+
+    return insights;
+  };
+
   return (
     <div className="space-y-8">
       <div className="grid gap-8 md:grid-cols-2">
@@ -107,10 +146,40 @@ export const ComparisonMode = () => {
       </div>
 
       {site1 && site2 && (
-        <Card className="p-6">
-          <h3 className="text-xl font-semibold mb-6">Comparação de Sites</h3>
-          
-          <div className="space-y-8">
+        <div className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4">{new URL(site1.url).hostname}</h4>
+              <SeoScore score={site1.seoScore.score} details={site1.seoScore.details} />
+            </Card>
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4">{new URL(site2.url).hostname}</h4>
+              <SeoScore score={site2.seoScore.score} details={site2.seoScore.details} />
+            </Card>
+          </div>
+
+          <Card className="p-6">
+            <h3 className="text-xl font-semibold mb-6">Insights da Comparação</h3>
+            <div className="space-y-4">
+              {generateInsights(site1, site2).map((insight, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg ${
+                    insight.type === "positive"
+                      ? "bg-green-50 border border-green-200"
+                      : insight.type === "negative"
+                      ? "bg-red-50 border border-red-200"
+                      : "bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  {insight.message}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-xl font-semibold mb-6">Métricas Detalhadas</h3>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -183,23 +252,23 @@ export const ComparisonMode = () => {
                 </TableRow>
               </TableBody>
             </Table>
+          </Card>
 
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Palavras-chave em Comum</h4>
-              <div className="flex flex-wrap gap-2">
-                {site1.keywords
-                  .filter((kw1) =>
-                    site2.keywords.some((kw2) => kw2.text === kw1.text)
-                  )
-                  .map((keyword) => (
-                    <Badge key={keyword.text} variant="secondary">
-                      {keyword.text} ({keyword.count})
-                    </Badge>
-                  ))}
-              </div>
+          <Card className="p-6">
+            <h3 className="text-xl font-semibold mb-6">Palavras-chave em Comum</h3>
+            <div className="flex flex-wrap gap-2">
+              {site1.keywords
+                .filter((kw1) =>
+                  site2.keywords.some((kw2) => kw2.text === kw1.text)
+                )
+                .map((keyword) => (
+                  <Badge key={keyword.text} variant="secondary">
+                    {keyword.text} ({keyword.count})
+                  </Badge>
+                ))}
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );
