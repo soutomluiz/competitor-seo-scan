@@ -6,6 +6,16 @@ interface SeoAnalysisResult {
   pageCount: number;
   keywords: { text: string; count: number }[];
   links: { url: string; text: string; type: "internal" | "external" }[];
+  seoScore: {
+    score: number;
+    details: {
+      titleScore: number;
+      descriptionScore: number;
+      keywordsScore: number;
+      internalLinksScore: number;
+      externalLinksScore: number;
+    };
+  };
 }
 
 export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
