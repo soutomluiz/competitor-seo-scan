@@ -34,6 +34,7 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
     // Generate PDF report
     const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-pdf', {
       body: {
+        url,
         title: data.title,
         description: data.description,
         keywords: data.keywords,
@@ -45,21 +46,24 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
 
     if (pdfError) {
       console.error('PDF generation error:', pdfError);
-    } else if (pdfData) {
+    }
+
+    let reportUrl;
+    if (pdfData && typeof pdfData === 'string') {
       // Convert the base64 data to a Blob
-      const binaryData = atob(pdfData as string);
+      const binaryData = atob(pdfData);
       const bytes = new Uint8Array(binaryData.length);
       for (let i = 0; i < binaryData.length; i++) {
         bytes[i] = binaryData.charCodeAt(i);
       }
       const blob = new Blob([bytes], { type: 'application/pdf' });
-      data.report_url = URL.createObjectURL(blob);
+      reportUrl = URL.createObjectURL(blob);
     }
 
     return {
       ...data,
       suggestions: data.suggestions || [],
-      reportUrl: data.report_url
+      reportUrl
     };
   } catch (error) {
     console.error('Service error:', error);

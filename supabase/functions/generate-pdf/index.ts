@@ -12,8 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { title, description, keywords, links, seoScore, suggestions } = await req.json();
-    console.log('Generating PDF report for:', title);
+    const { url, title, description, keywords, links, seoScore, suggestions } = await req.json();
+    console.log('Generating PDF report for:', url);
 
     // Create PDF document
     const doc = new PDFDocument();
@@ -26,6 +26,11 @@ serve(async (req) => {
     doc.fontSize(24).text('SEO Analysis Report', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(new Date().toLocaleDateString('pt-BR'), { align: 'right' });
+    doc.moveDown();
+
+    // URL
+    doc.fontSize(16).text('URL Analisada');
+    doc.fontSize(12).text(url);
     doc.moveDown();
 
     // Page Info
