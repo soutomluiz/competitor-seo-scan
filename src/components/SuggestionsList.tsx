@@ -7,7 +7,8 @@ interface SuggestionsListProps {
 }
 
 export const SuggestionsList = ({ suggestions }: SuggestionsListProps) => {
-  if (!suggestions.length) return null;
+  // Only return null if suggestions is undefined or null, not if it's an empty array
+  if (!suggestions) return null;
 
   const getSuggestionPriority = (suggestion: string): "high" | "medium" | "low" => {
     const lowercaseSuggestion = suggestion.toLowerCase();
