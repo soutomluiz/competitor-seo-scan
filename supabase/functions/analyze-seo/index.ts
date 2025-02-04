@@ -7,15 +7,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Common words to filter out
+// Enhanced Portuguese stop words for SEO analysis
 const stopWords = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
-  'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
-  'will', 'with', 'home', 'contact', 'terms', 'privacy', 'policy', 'about',
-  'menu', 'click', 'here', 'read', 'more', 'this', 'page', 'website'
+  // Common Portuguese words
+  'a', 'ao', 'aos', 'aquela', 'aquelas', 'aquele', 'aqueles', 'aquilo', 'as', 'até',
+  'com', 'como', 'da', 'das', 'de', 'dela', 'delas', 'dele', 'deles', 'depois',
+  'do', 'dos', 'e', 'ela', 'elas', 'ele', 'eles', 'em', 'entre', 'era',
+  'eram', 'essa', 'essas', 'esse', 'esses', 'esta', 'estas', 'este', 'estes',
+  'eu', 'foi', 'foram', 'há', 'isso', 'isto', 'já', 'lhe', 'lhes', 'mais',
+  'mas', 'me', 'mesmo', 'meu', 'meus', 'minha', 'minhas', 'muito', 'na', 'não',
+  'nas', 'nem', 'no', 'nos', 'nossa', 'nossas', 'nosso', 'nossos', 'num', 'numa',
+  'o', 'os', 'ou', 'para', 'pela', 'pelas', 'pelo', 'pelos', 'por', 'qual',
+  'quando', 'que', 'quem', 'são', 'se', 'seja', 'sem', 'seu', 'seus', 'só',
+  'sua', 'suas', 'também', 'te', 'tem', 'têm', 'seu', 'sua', 'teu', 'tua',
+  'um', 'uma', 'umas', 'uns', 'você', 'vocês',
+  
+  // Common website terms to filter out
+  'menu', 'home', 'início', 'contato', 'sobre', 'termos', 'política',
+  'privacidade', 'cookies', 'aceitar', 'fechar', 'abrir', 'clique', 'aqui',
+  'saiba', 'mais', 'leia', 'página', 'site', 'website', 'web', 'email',
+  'newsletter', 'inscreva', 'cadastre', 'enviar', 'buscar', 'pesquisar'
 ]);
 
-// SEO scoring criteria
+// Function to clean and normalize text
+function normalizeText(text: string): string {
+  return text.toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-z0-9\s]/g, ' ') // Keep only letters, numbers and spaces
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+}
+
+// Function to extract meaningful keywords
+function extractKeywords(text: string): { text: string; count: number }[] {
+  const words = normalizeText(text)
+    .split(/\s+/)
+    .filter(word => 
+      word.length > 3 && // Filter out short words
+      !stopWords.has(word.toLowerCase()) && // Remove stop words
+      !/^\d+$/.test(word) // Remove pure numbers
+    );
+
+  const keywordCount: Record<string, number> = {};
+  
+  // Count word frequencies
+  words.forEach(word => {
+    keywordCount[word] = (keywordCount[word] || 0) + 1;
+  });
+
+  // Convert to array and sort by frequency
+  return Object.entries(keywordCount)
+    .map(([text, count]) => ({ text, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20); // Keep top 20 keywords
+}
+
 const seoScoring = {
   titleLength: {
     min: 30,
@@ -182,28 +229,13 @@ serve(async (req) => {
       throw new Error('Failed to parse HTML document')
     }
 
-    // Extract title
+    // Extract title and description
     const title = doc.querySelector('title')?.textContent || ''
-    
-    // Extract meta description
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     
-    // Extract and analyze keywords from content
+    // Extract and analyze content using improved NLP
     const content = doc.body?.textContent || ''
-    const words = content.toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(word => word.length > 3 && !stopWords.has(word.toLowerCase()))
-    
-    const keywordCount: Record<string, number> = {}
-    words.forEach(word => {
-      keywordCount[word] = (keywordCount[word] || 0) + 1
-    })
-    
-    const keywords = Object.entries(keywordCount)
-      .map(([text, count]) => ({ text, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20)
+    const keywords = extractKeywords(content)
 
     // Extract links
     const links = Array.from(doc.querySelectorAll('a'))
@@ -219,7 +251,7 @@ serve(async (req) => {
       })
       .filter(link => link.url && link.text)
 
-    // Count pages (estimate based on internal links)
+    // Count pages
     const pageCount = new Set(
       links
         .filter(link => link.type === 'internal')
