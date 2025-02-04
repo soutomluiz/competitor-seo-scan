@@ -16,9 +16,15 @@ interface SeoScoreProps {
 
 export const SeoScore = ({ score, details }: SeoScoreProps) => {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-yellow-500";
-    return "bg-red-500";
+    if (score >= 80) return "bg-[#0FA0CE]"; // Bright Blue for good SEO
+    if (score >= 50) return "bg-[#FEF7CD]"; // Soft Yellow for medium SEO
+    return "bg-[#ea384c]"; // Red for bad SEO
+  };
+
+  const getProgressColor = (score: number) => {
+    if (score >= 80) return "bg-[#0FA0CE]"; // Bright Blue for good SEO
+    if (score >= 50) return "bg-[#FEF7CD]"; // Soft Yellow for medium SEO
+    return "bg-[#ea384c]"; // Red for bad SEO
   };
 
   const getScoreExplanation = (score: number, details: SeoScoreDetails): string => {
@@ -39,7 +45,7 @@ export const SeoScore = ({ score, details }: SeoScoreProps) => {
         return "Ótimo SEO! Pode melhorar a distribuição de palavras-chave.";
       }
       return "Parabéns! Seu site está muito bem otimizado para SEO.";
-    } else if (score >= 60) {
+    } else if (score >= 50) {
       if (details.titleScore < 70) {
         return "SEO razoável. O título da página precisa ser otimizado.";
       } else if (details.descriptionScore < 70) {
@@ -84,7 +90,11 @@ export const SeoScore = ({ score, details }: SeoScoreProps) => {
                 <span>{item.label}</span>
                 <span>{Math.round(item.score)}%</span>
               </div>
-              <Progress value={item.score} className="h-2" />
+              <Progress 
+                value={item.score} 
+                className="h-2" 
+                indicatorClassName={getProgressColor(item.score)}
+              />
             </div>
           ))}
         </div>
