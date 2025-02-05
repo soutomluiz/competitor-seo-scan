@@ -9,6 +9,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Simple in-memory cache for URL analysis results
+const analysisCache = new Map();
+const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -18,22 +22,26 @@ serve(async (req) => {
     const { url } = await req.json()
     console.log(`Analyzing URL: ${url}`)
 
-    // Validate and format URL
+    // Check cache first
+    const cachedResult = analysisCache.get(url);
+    if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_DURATION) {
+      console.log('Returning cached result for:', url);
+      return new Response(
+        JSON.stringify(cachedResult.data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let formattedUrl;
     try {
       let cleanUrl = url.replace(/:\/*$/, '');
-      
       if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
         cleanUrl = `https://${cleanUrl}`;
       }
-
       formattedUrl = new URL(cleanUrl);
-
       if (!formattedUrl.hostname.includes('.')) {
         throw new Error('Invalid domain format');
       }
-
-      console.log('Formatted URL:', formattedUrl.toString());
     } catch (error) {
       console.error('URL Validation Error:', error);
       throw new Error('Invalid URL format');
@@ -45,7 +53,6 @@ serve(async (req) => {
     }
 
     const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1?api_key=${SCRAPING_BEE_API_KEY}&url=${encodeURIComponent(formattedUrl.toString())}&render_js=false`
-    console.log('Calling ScrapingBee with URL:', scrapingBeeUrl);
     
     const response = await fetch(scrapingBeeUrl)
     if (!response.ok) {
@@ -54,7 +61,6 @@ serve(async (req) => {
     }
     
     const html = await response.text()
-
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
     
@@ -66,7 +72,6 @@ serve(async (req) => {
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
 
-    // Call the analyze-keywords function
     const projectId = 'xmyhncwloxszvlckinik';
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -95,7 +100,6 @@ serve(async (req) => {
       const errorData = await keywordsResponse.json();
       console.error('Keywords analysis error:', keywordsResponse.status, errorData);
       
-      // Check if it's a quota exceeded error and forward it
       if (keywordsResponse.status === 429 && errorData.error === 'QUOTA_EXCEEDED') {
         return new Response(
           JSON.stringify(errorData),
@@ -118,34 +122,37 @@ serve(async (req) => {
 
     const keywords = keywordsData.keywords;
 
+    // Optimize links extraction
     const links = Array.from(doc.querySelectorAll('a'))
-      .map(link => {
-        const href = link.getAttribute('href') || ''
-        const text = link.textContent || ''
-        const isInternal = href.startsWith('/') || href.includes(new URL(url).hostname)
-        return {
-          url: href,
-          text: text.trim(),
-          type: isInternal ? 'internal' : 'external' as const
+      .reduce((acc, link) => {
+        const href = link.getAttribute('href')
+        const text = link.textContent?.trim()
+        if (href && text) {
+          const isInternal = href.startsWith('/') || href.includes(new URL(url).hostname)
+          acc.push({
+            url: href,
+            text,
+            type: isInternal ? 'internal' : 'external'
+          })
         }
-      })
-      .filter(link => link.url && link.text)
+        return acc
+      }, [] as Array<{ url: string; text: string; type: 'internal' | 'external' }>);
 
     const pageCount = new Set(
       links
         .filter(link => link.type === 'internal')
         .map(link => link.url)
-    ).size
+    ).size;
 
     const analysis = {
       title,
       description: metaDescription,
       keywords,
       links
-    }
+    };
 
-    const seoScore = calculateSeoScore(analysis)
-    const suggestions = generateSuggestions(analysis)
+    const seoScore = calculateSeoScore(analysis);
+    const suggestions = generateSuggestions(analysis);
 
     const analysisResult = {
       title,
@@ -156,11 +163,18 @@ serve(async (req) => {
       seoScore,
       suggestions,
       niche: keywordsData.niche
-    }
+    };
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Cache the result
+    analysisCache.set(url, {
+      data: analysisResult,
+      timestamp: Date.now()
+    });
+
+    // Store in database
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { error: insertError } = await supabase
       .from('seo_analyses')
@@ -172,11 +186,11 @@ serve(async (req) => {
         keywords,
         links,
         suggestions
-      })
+      });
 
     if (insertError) {
-      console.error('Error inserting analysis:', insertError)
-      throw new Error('Failed to store analysis results')
+      console.error('Error inserting analysis:', insertError);
+      // Don't throw error here, just log it to not block the response
     }
 
     return new Response(
@@ -187,9 +201,9 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         }
       }
-    )
+    );
   } catch (error) {
-    console.error('Error in analyze-seo function:', error)
+    console.error('Error in analyze-seo function:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
@@ -202,6 +216,6 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         }
       }
-    )
+    );
   }
-})
+});

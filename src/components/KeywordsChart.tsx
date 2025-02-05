@@ -10,9 +10,9 @@ interface KeywordsChartProps {
 export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
   // Calculate relevance score based on word length and frequency
   const getRelevanceScore = (keyword: string, count: number) => {
-    const lengthFactor = Math.min(keyword.length / 10, 1); // Longer words get higher scores, max at 10 chars
+    const lengthFactor = Math.min(keyword.length / 10, 1);
     const frequencyFactor = count / Math.max(...keywords.map(k => k.count));
-    return (lengthFactor * 0.4 + frequencyFactor * 0.6) * 100; // Weighted score
+    return (lengthFactor * 0.4 + frequencyFactor * 0.6) * 100;
   };
 
   const data = keywords
@@ -25,12 +25,11 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
     }));
 
   const getRelevanceColor = (score: number) => {
-    if (score >= 80) return "#86A789"; // High relevance - Green
-    if (score >= 60) return "#B2C8BA"; // Medium relevance - Light green
-    return "#D2E3C8"; // Low relevance - Very light green
+    if (score >= 80) return "#86A789";
+    if (score >= 60) return "#B2C8BA";
+    return "#D2E3C8";
   };
 
-  // Generate related keyword suggestions based on top keywords
   const generateRelatedKeywords = (keyword: string): string[] => {
     const commonPrefixes = ['como', 'melhor', 'top', 'guia'];
     const commonSuffixes = ['dicas', 'tutorial', 'profissional', 'avançado'];
@@ -42,7 +41,6 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
     ];
   };
 
-  // Get related keywords for top 3 most relevant keywords
   const relatedKeywordSuggestions = data
     .sort((a, b) => b.relevance - a.relevance)
     .slice(0, 3)
@@ -58,22 +56,20 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
         <p className="text-sm text-muted-foreground">
           As palavras-chave são classificadas por relevância SEO, considerando frequência e impacto no ranqueamento.
         </p>
-        <div className="h-[350px] w-full"> {/* Increased height to accommodate labels */}
+        <div className="h-[320px] w-full"> {/* Adjusted height */}
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={data} 
-              margin={{ top: 20, right: 30, left: 20, bottom: 90 }} // Increased bottom margin
+              margin={{ top: 20, right: 30, left: 20, bottom: 100 }} // Increased bottom margin
+              layout="vertical" // Changed to vertical layout for better label display
             >
-              <XAxis 
-                dataKey="keyword" 
-                angle={-45} 
-                textAnchor="end" 
-                height={80} // Increased height for labels
-                interval={0}
-                fontSize={12}
-                tick={{ dy: 10 }} // Adjusted vertical position of ticks
+              <XAxis type="number" />
+              <YAxis 
+                dataKey="keyword"
+                type="category"
+                width={150} // Fixed width for labels
+                tick={{ fontSize: 12 }}
               />
-              <YAxis />
               <Tooltip 
                 formatter={(value, name, props) => {
                   if (name === "count") {
@@ -83,7 +79,7 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
                 }}
                 labelFormatter={(label) => `Palavra-chave: ${label}`}
               />
-              <Bar dataKey="count" maxBarSize={50}> {/* Added maxBarSize for better proportions */}
+              <Bar dataKey="count" maxBarSize={30}>
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`}
@@ -95,7 +91,7 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4 text-sm mt-4"> {/* Added flex-wrap */}
+        <div className="flex flex-wrap justify-center gap-4 text-sm mt-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#86A789" }} />
             <span>Alta Relevância</span>
