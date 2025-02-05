@@ -65,7 +65,7 @@ serve(async (req) => {
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
 
-    // Call the analyze-keywords function using the Supabase project URL and service role key
+    // Call the analyze-keywords function
     const projectId = 'xmyhncwloxszvlckinik';
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -91,9 +91,21 @@ serve(async (req) => {
     );
 
     if (!keywordsResponse.ok) {
-      const errorText = await keywordsResponse.text();
-      console.error('Keywords analysis error:', keywordsResponse.status, errorText);
-      throw new Error(`Failed to analyze keywords: ${errorText}`);
+      const errorData = await keywordsResponse.json();
+      console.error('Keywords analysis error:', keywordsResponse.status, errorData);
+      
+      // Check if it's a quota exceeded error and forward it
+      if (keywordsResponse.status === 429 && errorData.error === 'QUOTA_EXCEEDED') {
+        return new Response(
+          JSON.stringify(errorData),
+          { 
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      throw new Error(`Failed to analyze keywords: ${JSON.stringify(errorData)}`);
     }
 
     const keywordsData = await keywordsResponse.json();
