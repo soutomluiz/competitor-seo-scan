@@ -40,19 +40,7 @@ serve(async (req) => {
       console.log('Formatted URL:', formattedUrl.toString());
     } catch (error) {
       console.error('URL Validation Error:', error);
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid URL format',
-          details: error.message
-        }),
-        { 
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      throw new Error('Invalid URL format');
     }
 
     const SCRAPING_BEE_API_KEY = Deno.env.get('SCRAPING_BEE_API_KEY')
@@ -84,9 +72,10 @@ serve(async (req) => {
     const title = doc.querySelector('title')?.textContent || ''
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
-    
+
     // Call the analyze-keywords function using the Supabase project URL
     const projectId = 'xmyhncwloxszvlckinik';
+    console.log('Calling analyze-keywords function...');
     const keywordsResponse = await fetch(
       `https://${projectId}.supabase.co/functions/v1/analyze-keywords`,
       {
@@ -104,14 +93,19 @@ serve(async (req) => {
     );
 
     if (!keywordsResponse.ok) {
-      console.error('Keywords analysis error:', keywordsResponse.status);
+      console.error('Keywords analysis error:', keywordsResponse.status, await keywordsResponse.text());
       throw new Error('Failed to analyze keywords');
     }
 
     const keywordsData = await keywordsResponse.json();
+    console.log('Keywords analysis result:', keywordsData);
+    
+    if (!keywordsData.keywords) {
+      throw new Error('Invalid keywords analysis response');
+    }
+
     const keywords = keywordsData.keywords;
 
-    // Extract and analyze links
     const links = Array.from(doc.querySelectorAll('a'))
       .map(link => {
         const href = link.getAttribute('href') || ''

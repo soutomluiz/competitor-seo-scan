@@ -17,6 +17,7 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
       throw new Error('OpenAI API key not configured');
     }
 
@@ -39,6 +40,7 @@ serve(async (req) => {
       }
     `;
 
+    console.log('Sending request to OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -62,11 +64,19 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
+      console.error('OpenAI API error:', response.status, await response.text());
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('OpenAI API response:', data);
+
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI API');
+    }
+
     const result = JSON.parse(data.choices[0].message.content);
+    console.log('Parsed result:', result);
 
     return new Response(
       JSON.stringify(result),
@@ -81,7 +91,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in analyze-keywords function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { 
         status: 500,
         headers: { 
