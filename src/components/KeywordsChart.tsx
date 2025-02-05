@@ -58,16 +58,20 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
         <p className="text-sm text-muted-foreground">
           As palavras-chave são classificadas por relevância SEO, considerando frequência e impacto no ranqueamento.
         </p>
-        <div className="h-[300px] w-full">
+        <div className="h-[350px] w-full"> {/* Increased height to accommodate labels */}
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart 
+              data={data} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 90 }} // Increased bottom margin
+            >
               <XAxis 
                 dataKey="keyword" 
                 angle={-45} 
                 textAnchor="end" 
-                height={70} 
+                height={80} // Increased height for labels
                 interval={0}
                 fontSize={12}
+                tick={{ dy: 10 }} // Adjusted vertical position of ticks
               />
               <YAxis />
               <Tooltip 
@@ -79,7 +83,7 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
                 }}
                 labelFormatter={(label) => `Palavra-chave: ${label}`}
               />
-              <Bar dataKey="count">
+              <Bar dataKey="count" maxBarSize={50}> {/* Added maxBarSize for better proportions */}
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`}
@@ -91,7 +95,7 @@ export const KeywordsChart = ({ keywords }: KeywordsChartProps) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex justify-center gap-4 text-sm">
+        <div className="flex flex-wrap justify-center gap-4 text-sm mt-4"> {/* Added flex-wrap */}
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#86A789" }} />
             <span>Alta Relevância</span>
