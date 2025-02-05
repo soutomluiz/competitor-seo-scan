@@ -1,5 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 import { extractKeywords } from "./textProcessing.ts";
 import { generateSuggestions, calculateSeoScore } from "./seoAnalysis.ts";
@@ -84,9 +85,10 @@ serve(async (req) => {
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
     
-    // Call the new analyze-keywords function
+    // Call the analyze-keywords function using the Supabase project URL
+    const projectId = 'xmyhncwloxszvlckinik';
     const keywordsResponse = await fetch(
-      'http://localhost:54321/functions/v1/analyze-keywords',
+      `https://${projectId}.supabase.co/functions/v1/analyze-keywords`,
       {
         method: 'POST',
         headers: {
