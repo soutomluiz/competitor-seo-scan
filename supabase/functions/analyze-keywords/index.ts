@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
-      throw new Error('OpenAI API key not configured');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      console.error('Gemini API key not configured');
+      throw new Error('Gemini API key not configured');
     }
 
     const { content, title, description } = await req.json();
@@ -25,56 +25,60 @@ serve(async (req) => {
     }
 
     const prompt = `
-      Analise o seguinte conteúdo de um site e identifique:
-      1. O nicho principal do site
-      2. As 15 palavras-chave mais relevantes para SEO neste nicho, com suas frequências estimadas
+      Analyze the following website content and identify:
+      1. The main niche/topic of the website
+      2. The 15 most relevant SEO keywords, with their estimated frequencies
 
-      Título do site: ${title}
-      Descrição: ${description}
-      Conteúdo: ${content.substring(0, 2000)}...
+      Website Title: ${title}
+      Description: ${description}
+      Content: ${content.substring(0, 2000)}...
 
-      Responda em formato JSON com a seguinte estrutura:
+      Respond in JSON format with this structure:
       {
-        "niche": "nicho identificado",
+        "niche": "identified niche",
         "keywords": [
-          {"text": "palavra-chave", "count": número_de_ocorrências}
+          {"text": "keyword", "count": frequency_number}
         ]
       }
+
+      Make sure to:
+      1. Only include relevant keywords
+      2. Provide realistic frequency counts
+      3. Focus on SEO-valuable terms
+      4. Return valid JSON
     `;
 
-    console.log('Sending request to OpenAI API...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Sending request to Gemini API...');
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': geminiApiKey,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um especialista em SEO que analisa sites e identifica nichos e palavras-chave relevantes.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          topK: 1,
+          topP: 1,
+        },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('Gemini API error:', response.status, errorText);
       
       // Check for quota exceeded error
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ 
             error: 'QUOTA_EXCEEDED',
-            message: 'OpenAI API quota exceeded. Please check your billing details or try again later.'
+            message: 'Gemini API quota exceeded. Please check your billing details or try again later.'
           }),
           { 
             status: 429,
@@ -83,21 +87,26 @@ serve(async (req) => {
         );
       }
       
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI API response:', data);
+    console.log('Gemini API response:', data);
 
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI API');
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid response from Gemini API');
     }
 
-    const result = JSON.parse(data.choices[0].message.content);
+    // Extract the JSON string from the response text
+    const jsonString = data.candidates[0].content.parts[0].text.trim();
+    // Remove any markdown code block markers if present
+    const cleanJsonString = jsonString.replace(/```json\n?|\n?```/g, '').trim();
+    
+    const result = JSON.parse(cleanJsonString);
     console.log('Parsed result:', result);
 
     if (!result.keywords || !Array.isArray(result.keywords)) {
-      throw new Error('Invalid keywords format in OpenAI response');
+      throw new Error('Invalid keywords format in Gemini response');
     }
 
     return new Response(
