@@ -2,8 +2,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
-import { extractKeywords } from "./textProcessing.ts";
-import { generateSuggestions, calculateSeoScore } from "./seoAnalysis.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,17 +20,14 @@ serve(async (req) => {
     // Validate and format URL
     let formattedUrl;
     try {
-      // Remove trailing colon and slash if present
       let cleanUrl = url.replace(/:\/*$/, '');
       
-      // Ensure URL has protocol
       if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
         cleanUrl = `https://${cleanUrl}`;
       }
 
       formattedUrl = new URL(cleanUrl);
 
-      // Validate domain format (must include at least one dot)
       if (!formattedUrl.hostname.includes('.')) {
         throw new Error('Invalid domain format');
       }
@@ -48,7 +43,6 @@ serve(async (req) => {
       throw new Error('ScrapingBee API key not configured')
     }
 
-    // Call ScrapingBee API with properly formatted URL
     const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1?api_key=${SCRAPING_BEE_API_KEY}&url=${encodeURIComponent(formattedUrl.toString())}&render_js=false`
     console.log('Calling ScrapingBee with URL:', scrapingBeeUrl);
     
@@ -60,7 +54,6 @@ serve(async (req) => {
     
     const html = await response.text()
 
-    // Parse HTML
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
     
@@ -68,20 +61,25 @@ serve(async (req) => {
       throw new Error('Failed to parse HTML document')
     }
 
-    // Extract page data
     const title = doc.querySelector('title')?.textContent || ''
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
 
-    // Call the analyze-keywords function using the Supabase project URL
+    // Call the analyze-keywords function using the Supabase project URL and service role key
     const projectId = 'xmyhncwloxszvlckinik';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!serviceRoleKey) {
+      throw new Error('Service role key not configured');
+    }
+
     console.log('Calling analyze-keywords function...');
     const keywordsResponse = await fetch(
       `https://${projectId}.supabase.co/functions/v1/analyze-keywords`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Authorization': `Bearer ${serviceRoleKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -93,8 +91,9 @@ serve(async (req) => {
     );
 
     if (!keywordsResponse.ok) {
-      console.error('Keywords analysis error:', keywordsResponse.status, await keywordsResponse.text());
-      throw new Error('Failed to analyze keywords');
+      const errorText = await keywordsResponse.text();
+      console.error('Keywords analysis error:', keywordsResponse.status, errorText);
+      throw new Error(`Failed to analyze keywords: ${errorText}`);
     }
 
     const keywordsData = await keywordsResponse.json();
@@ -119,14 +118,12 @@ serve(async (req) => {
       })
       .filter(link => link.url && link.text)
 
-    // Count pages
     const pageCount = new Set(
       links
         .filter(link => link.type === 'internal')
         .map(link => link.url)
     ).size
 
-    // Generate analysis
     const analysis = {
       title,
       description: metaDescription,
@@ -148,7 +145,6 @@ serve(async (req) => {
       niche: keywordsData.niche
     }
 
-    // Store in Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
