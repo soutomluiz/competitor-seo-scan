@@ -84,8 +84,30 @@ serve(async (req) => {
     const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const content = doc.body?.textContent || ''
     
-    // Extract keywords using NLP
-    const keywords = extractKeywords(content)
+    // Call the new analyze-keywords function
+    const keywordsResponse = await fetch(
+      'http://localhost:54321/functions/v1/analyze-keywords',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content,
+          title,
+          description: metaDescription,
+        }),
+      }
+    );
+
+    if (!keywordsResponse.ok) {
+      console.error('Keywords analysis error:', keywordsResponse.status);
+      throw new Error('Failed to analyze keywords');
+    }
+
+    const keywordsData = await keywordsResponse.json();
+    const keywords = keywordsData.keywords;
 
     // Extract and analyze links
     const links = Array.from(doc.querySelectorAll('a'))
@@ -126,7 +148,8 @@ serve(async (req) => {
       keywords,
       links,
       seoScore,
-      suggestions
+      suggestions,
+      niche: keywordsData.niche
     }
 
     // Store in Supabase
