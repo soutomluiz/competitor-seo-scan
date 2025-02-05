@@ -50,11 +50,21 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Analysis error:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao analisar o site. Por favor, tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Check for quota exceeded error
+      if (error instanceof Error && error.message.includes('quota exceeded')) {
+        toast({
+          title: "Limite Excedido",
+          description: "O limite da API foi excedido. Por favor, tente novamente mais tarde ou verifique suas configurações de faturamento.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao analisar o site. Por favor, tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

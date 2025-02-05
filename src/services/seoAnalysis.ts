@@ -27,6 +27,10 @@ export const analyzeSeo = async (url: string): Promise<SeoAnalysisResult> => {
     });
 
     if (error) {
+      // Check if the error is due to quota exceeded
+      if (error.message?.includes('QUOTA_EXCEEDED')) {
+        throw new Error('OpenAI API quota exceeded. Please try again later or check your billing details.');
+      }
       console.error('Analysis error:', error);
       throw new Error('Failed to analyze website');
     }
